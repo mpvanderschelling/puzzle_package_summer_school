@@ -4,16 +4,16 @@ import jax.numpy as jnp
 import jax.random as jr
 from jaxtyping import PRNGKeyArray
 
+deltas = jnp.array([
+    [0, 1],   # up
+    [0, -1],  # down
+    [-1, 0],  # left
+    [1, 0],   # right
+])  # shape (4, 2)
+
 
 @eqx.filter_jit
 def random_walk(key: PRNGKeyArray, max_steps=100, grid_size=10):
-    deltas = jnp.array([
-        [0, 1],   # up
-        [0, -1],  # down
-        [-1, 0],  # left
-        [1, 0],   # right
-    ])  # shape (4, 2)
-
     key_start, key_scan, key_chunks = jr.split(key, 3)
     start_pos = jr.randint(key_start, (2,), 0, grid_size)
 
