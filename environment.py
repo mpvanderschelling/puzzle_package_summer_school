@@ -1,13 +1,12 @@
 from functools import partial
+from typing import Any
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 from jaxtyping import PRNGKeyArray
-from typing import Any
 
-
-from region_generator import random_walk
+from region_generator import create_puzzle
 
 deltas = jnp.array([
     [0, 1],   # up
@@ -19,29 +18,32 @@ deltas = jnp.array([
 
 class EnvParams(eqx.Module):
     grid_size: int = 4
-    max_steps: int = 100
+    n_pieces: int = 4
+    min_piece_size: int = 2
+    max_piece_size: int = 4
 
 
 class EnvState(eqx.Module):
-    grid: jax.Array
-    pieces: jax.Array
+    grid: jax.Array  # shape (pieces+1, grid_size, grid_size), dtype=bool
 
 
 class PackingGameEnv():
 
     @partial(jax.jit, static_argnames=("self", "params",))
-    def reset(self, key: KeyArray, params: EnvParams):
-        full_path = random_walk(
-            key=key,
-            max_steps=params.max_steps,
-            grid_size=params.grid_size
+    def reset(self, key: PRNGKeyArray, params: EnvParams):
+        puzzle_fn = partial(
+            create_puzzle,
+            grid_size=params.grid_size,
+            n_pieces=params.n_pieces,
+            min_piece_size=params.min_piece_size,
+            max_piece_size=params.max_piece_size,
         )
 
-        state = EnvState(
-            grid=...,
-            pieces=...,
-        )
-        return obs, state
+        state = puzzle_fn(key)
+        return self.get_obs(state), state
+
+    def get_obs(self, state: EnvState) -> jax.Array:
+        return state.grid.astype(jnp.float32)
 
     def step(
         self,
@@ -50,3 +52,4 @@ class PackingGameEnv():
         action: int | float | jax.Array,
         params: EnvParams,
     ) -> tuple[jax.Array, EnvState, jax.Array, jax.Array, dict[Any, Any]]:
+        ...
