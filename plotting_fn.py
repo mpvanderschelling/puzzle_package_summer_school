@@ -2,6 +2,16 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
 # ==================
+
+COLORMAPS = [
+    'grey',
+    'Purples',
+    'Blues',
+    'Greens',
+    'Oranges',
+    'Reds',
+]
+
 colors = jnp.array([
     [0, 0, 0],   # Red
     [0, 1, 0],   # Green
