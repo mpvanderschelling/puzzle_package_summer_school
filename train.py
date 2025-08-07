@@ -1,10 +1,12 @@
-import numpy as np
-import torch
 import random
 from collections import defaultdict
 
-from environment import EnvParams, EnvState, PackingGameEnv
+import numpy as np
+import torch
+
 from agent import PolicyGradientAgent
+from environment import EnvParams, EnvState, PackingGameEnv
+
 
 class VanillaReinforceTrainer:
     """
@@ -12,8 +14,9 @@ class VanillaReinforceTrainer:
     There is no value function.
     Perhaps the simplest policy gradient algorithm.
     """
-    def __init__(self, 
-                 env: PackingGameEnv, 
+
+    def __init__(self,
+                 env: PackingGameEnv,
                  eval_env: PackingGameEnv,
                  agent: torch.nn.Module,
                  optimizer: str = "Adam",
@@ -23,8 +26,9 @@ class VanillaReinforceTrainer:
         self.eval_env = eval_env
         self.agent = agent
         try:
-            self.optimizer = getattr(torch.optim, optimizer)(self.agent.parameters(), **optimizer_kwargs)
-        except:
+            self.optimizer = getattr(torch.optim, optimizer)(
+                self.agent.parameters(), **optimizer_kwargs)
+        except Exception:
             raise ValueError(f"Optimizer {optimizer} not found")
         self.device = device
 
@@ -59,7 +63,7 @@ class VanillaReinforceTrainer:
                 # no discount factor, horizon = num_pieces
                 rewards_to_go.append(sum(rewards[i:]))
             self.exp_buffer[episode_num]['rewards_to_go'] = rewards_to_go
-            
+
     def policy_update(self):
         """
         All of the exp_buffer will only cause one update.
@@ -71,7 +75,6 @@ class VanillaReinforceTrainer:
             loss = -torch.sum(logprobs * rewards_to_go)
             loss.backward()
         self.optimizer.step()
-
 
     def train(self, num_episodes=1000, max_steps=1000, eval_interval=10):
         """
@@ -100,11 +103,12 @@ class VanillaReinforceTrainer:
                 if done:
                     break
         return torch.mean(total_reward)
-    
+
 
 if __name__ == "__main__":
     env = PackingGameEnv(EnvParams(board_size=10, n_pieces=10))
     eval_env = PackingGameEnv(EnvParams(board_size=10, n_pieces=10))
-    agent = PolicyGradientAgent(board_size=10, n_pieces=10, channel_num_list=[32, 32, 32], kernel_size_list=[3, 3, 3])
+    agent = PolicyGradientAgent(board_size=10, n_pieces=10, channel_num_list=[
+                                32, 32, 32], kernel_size_list=[3, 3, 3])
     trainer = VanillaReinforceTrainer(env, eval_env, agent)
     trainer.train(num_episodes=1000, max_steps=1000, eval_interval=10)
