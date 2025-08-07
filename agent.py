@@ -1,7 +1,9 @@
-import torch 
-import torch.nn as nn
 from abc import ABC, abstractmethod
 from math import floor
+
+import torch
+import torch.nn as nn
+
 
 class PolicyGradientAgent(nn.Module):
     def __init__(self,
@@ -9,7 +11,7 @@ class PolicyGradientAgent(nn.Module):
                  n_pieces: int,
                  channel_num_list: list[int],
                  kernel_size_list: list[int],
-                 activation_fn:str = "ReLU",
+                 activation_fn: str = "ReLU",
                  value_network: nn.Module = None):
         """
         We are going to be using a purely convolutional neural network to represent the policy.
@@ -29,19 +31,21 @@ class PolicyGradientAgent(nn.Module):
         self.kernel_size_list = kernel_size_list
         self.activation_fn = getattr(nn, activation_fn)
         self.value_network = value_network
-        
+
         if len(kernel_size_list) == 1:
-            self.kernel_size_list = [kernel_size_list[0]] * (len(channel_num_list) - 1)
+            self.kernel_size_list = [
+                kernel_size_list[0]] * (len(channel_num_list) - 1)
         elif len(kernel_size_list) != len(channel_num_list) - 1:
-            raise ValueError("kernel_size_list must be the same length as channel_num_list")
-        
+            raise ValueError(
+                "kernel_size_list must be the same length as channel_num_list")
+
         self.layer_dict = nn.ModuleDict()
         for i, kernel_size in enumerate(self.kernel_size_list):
-            self.layer_dict[f"conv_{i+1}"] = nn.Conv2d(self.channel_num_list[i], 
-                                                    self.channel_num_list[i+1], 
-                                                    kernel_size=kernel_size)
+            self.layer_dict[f"conv_{i+1}"] = nn.Conv2d(self.channel_num_list[i],
+                                                       self.channel_num_list[i+1],
+                                                       kernel_size=kernel_size)
         self.layer_dict[f"activation"] = self.activation_fn()
-        
+
     def forward(self, x):
         """
         Args:
@@ -55,7 +59,7 @@ class PolicyGradientAgent(nn.Module):
             x = self.layer_dict[f"activation"](x)
         x = self.layer_dict[f"conv_{len(self.kernel_size_list)}"](x)
         return x
-    
+
     def act(self, x):
         """
         Args:
@@ -68,15 +72,15 @@ class PolicyGradientAgent(nn.Module):
         result = self.forward(x)
         result = result.reshape(batch_size, board_size * board_size)
         # sample from the softmax of the result
-        action = torch.multinomial(torch.nn.Softmax(dim = -1)(result), 1)
-        logprob = torch.nn.LogSoftmax(dim = -1)(result).gather(-1, action)
+        action = torch.multinomial(torch.nn.Softmax(dim=-1)(result), 1)
+        logprob = torch.nn.LogSoftmax(dim=-1)(result).gather(-1, action)
 
         row, col = divmod(action, board_size)
         if self.value_network is None:
             return (row, col), logprob
         else:
             return (row, col), logprob, self.get_value(x)
-    
+
     def get_value(self, x):
         """
         Args:
