@@ -1,3 +1,4 @@
 jax
 jaxtyping
 equinox
+git+https://github.com/mpvanderschelling/gymnax.git@main#egg=gymnax
