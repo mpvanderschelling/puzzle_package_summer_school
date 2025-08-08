@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from math import *
 
 
 class PolicyGradientAgent(nn.Module):
@@ -32,8 +33,8 @@ class PolicyGradientAgent(nn.Module):
 
         if len(kernel_size_list) == 1:
             self.kernel_size_list = [
-                kernel_size_list[0]] * (len(channel_num_list) - 1)
-        elif len(kernel_size_list) != len(channel_num_list) - 1:
+                kernel_size_list[0]] * (len(self.channel_num_list) - 1)
+        elif len(kernel_size_list) != len(self.channel_num_list) - 1:
             raise ValueError(
                 "kernel_size_list must be the same length as channel_num_list")
 
@@ -41,7 +42,8 @@ class PolicyGradientAgent(nn.Module):
         for i, kernel_size in enumerate(self.kernel_size_list):
             self.layer_dict[f"conv_{i+1}"] = nn.Conv2d(self.channel_num_list[i],
                                                        self.channel_num_list[i+1],
-                                                       kernel_size=kernel_size)
+                                                       kernel_size=kernel_size,
+                                                       padding = floor(kernel_size/2))
         self.layer_dict[f"activation"] = self.activation_fn()
 
         if value_head:
@@ -61,10 +63,12 @@ class PolicyGradientAgent(nn.Module):
             v is a scalar value produced by the value head.
         """
         batch_size, _, board_size, board_size = x.shape
-        for i in range(1, len(self.kernel_size_list)):
-            h = self.layer_dict[f"conv_{i}"](x)
+        h = x
+        for i in range(len(self.kernel_size_list) - 1):
+            h = self.layer_dict[f"conv_{i+1}"](h)
             h = self.layer_dict[f"activation"](h)
-        x = self.layer_dict[f"conv_{len(self.kernel_size_list)}"](h)
+        
+        x = self.layer_dict[f'conv_{i + 2}'](h)
         if self.value_head:
             v = self.value_network(h.reshape(batch_size, -1))
             return x, v
@@ -90,11 +94,10 @@ class PolicyGradientAgent(nn.Module):
         action = torch.multinomial(torch.nn.Softmax(dim=-1)(result), 1)
         logprob = torch.nn.LogSoftmax(dim=-1)(result).gather(-1, action)
 
-        row, col = divmod(action, board_size)
         if self.value_head:
-            return (row, col), logprob, v
+            return action, logprob, v
         else:
-            return (row, col), logprob
+            return action, logprob
 
     def get_value(self, x):
         """
